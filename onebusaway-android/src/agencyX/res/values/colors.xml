@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2010-2014 Paul Watts (paulcwatts@gmail.com)
+    and individual contributors.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources>
+    <!-- Agency X Theme -->
+    <color name="brand_color">#F44336</color>
+    <color name="brand_color_dark">#D32F2F</color>
+    <color name="theme_muted">#FFCAD2</color>
+    <color name="theme_accent">#E53935</color>
+
+    <color name="stop_info_ontime">#4CAF50</color>
+
+    <!-- Tutorials -->
+    <color name="tutorial_background">#dfF44336</color>
+
+    <!--  Material 3  -->
+    <color name="md_theme_primary">#904A42</color>
+    <color name="md_theme_onPrimary">#FFFFFF</color>
+    <color name="md_theme_primaryContainer">#FFDAD5</color>
+    <color name="md_theme_onPrimaryContainer">#73342C</color>
+
+    <color name="md_theme_secondary">#904A45</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_secondaryContainer">#FFDAD6</color>
+    <color name="md_theme_onSecondaryContainer">#73332F</color>
+
+    <color name="md_theme_background">#FFF8F7</color>
+    <color name="md_theme_onBackground">#231918</color>
+    <color name="md_theme_surface">#FFF8F7</color>
+    <color name="md_theme_onSurface">#231918</color>
+
+    <!-- Error Colors are inherited from base app -->
+
+    <color name="md_theme_surfaceContainerLowest">#FFFFFF</color>
+    <color name="md_theme_surfaceContainerLow">#FFF0EE</color>
+    <color name="md_theme_surfaceContainer">#FCEAE7</color>
+    <color name="md_theme_surfaceContainerHigh">#F7E4E1</color>
+    <color name="md_theme_surfaceContainerHighest">#F1DEDC</color>
+
+    <!-- See src/main/res/colors.xml for more colors you can override here -->
+</resources>
