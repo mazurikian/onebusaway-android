@@ -96,7 +96,7 @@ public class RequestBase {
                 context.setBaseUrl(mContext, mBuilder);
                 context.setAppInfo(mBuilder);
                 mBuilder.appendQueryParameter("version", "2");
-                mBuilder.appendQueryParameter("key", context.getApiKey());
+               // mBuilder.appendQueryParameter("key", context.getApiKey());
             }
             return mBuilder.build();
         }
