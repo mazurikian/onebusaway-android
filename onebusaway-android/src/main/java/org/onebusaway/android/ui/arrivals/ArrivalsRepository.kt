@@ -322,7 +322,7 @@ class DefaultArrivalsRepository @Inject constructor(
         if (shortName.isNullOrEmpty()) {
             shortName = longName
         }
-        if (longName.isNullOrEmpty() || shortName == longName) {
+        if (!response.description.isNullOrEmpty() || longName.isNullOrEmpty() || shortName == longName) {
             longName = response.description
         }
 

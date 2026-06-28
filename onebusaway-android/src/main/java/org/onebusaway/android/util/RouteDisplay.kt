@@ -61,7 +61,7 @@ fun getRouteDescription(route: ObaRoute): String? {
     if (shortName.isNullOrEmpty()) {
         shortName = longName
     }
-    if (longName.isNullOrEmpty() || shortName == longName) {
+    if (!route.description.isNullOrEmpty() || longName.isNullOrEmpty() || shortName == longName) {
         longName = route.description
     }
     return MyTextUtils.formatDisplayText(longName)

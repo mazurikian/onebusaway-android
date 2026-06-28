@@ -87,7 +87,7 @@ class DefaultRouteInfoRepository @Inject constructor(
     private fun registerRouteUsage(route: ObaRouteResponse) {
         val values = ContentValues()
         values.put(ObaContract.Routes.SHORTNAME, route.shortName)
-        values.put(ObaContract.Routes.LONGNAME, route.longName)
+        values.put(ObaContract.Routes.LONGNAME, if (!route.description.isNullOrEmpty()) route.description else route.longName)
         values.put(ObaContract.Routes.URL, route.url)
         regionRepository.region.value?.let {
             values.put(ObaContract.Routes.REGION_ID, it.id)
