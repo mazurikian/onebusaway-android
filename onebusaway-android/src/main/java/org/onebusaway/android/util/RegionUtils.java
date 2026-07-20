@@ -358,7 +358,7 @@ public class RegionUtils {
               BuildConfig.FIXED_REGION_OPEN311_BASE_URL);
       open311Array[0] = open311Server;
     } else {
-      open311Array = null;
+      open311Array = new Region.Open311Server[0];
     }
 
     Region region =
