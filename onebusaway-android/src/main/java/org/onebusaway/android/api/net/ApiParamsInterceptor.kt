@@ -35,6 +35,11 @@ class ApiParamsInterceptor(private val resolver: ObaEndpointResolver) : Intercep
             addQueryParameter("version", ObaApi.VERSION2)
             addQueryParameter("key", resolver.apiKey)
         }.build()
-        return chain.proceed(request.newBuilder().url(url).build())
+        return chain.proceed(
+            request.newBuilder()
+                .url(url)
+                .header("Authorization", "Bearer ${resolver.apiKey}")
+                .build()
+        )
     }
 }
