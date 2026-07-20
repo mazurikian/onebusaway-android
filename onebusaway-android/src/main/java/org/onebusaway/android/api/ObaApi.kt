@@ -32,7 +32,7 @@ object ObaApi {
     const val VERSION2 = "2"
 
     /** The OBA REST API key appended to every request. */
-    const val API_KEY = "v1_BktoDJ2gJlu6nLM6LsT9H8IUbWc=cGF1bGN3YXR0c0BnbWFpbC5jb20="
+    const val API_KEY = "CuandoSUBO-Android-9b8a8543-b111-4caf-80b0-b70913425a0c"
 
     /** Preferences key holding the persisted per-install app UID (sent as `app_uid`). */
     const val APP_UID = "app_uid"
