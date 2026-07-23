@@ -24,10 +24,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.onebusaway.android.BuildConfig
@@ -59,11 +60,12 @@ interface RegionRepository {
     fun currentRegion(): Region? = region.value
 
     /**
-     * Whether a region is currently resolved — the deduped `region != null` projection. Derived once
-     * here so feature view models (survey, what's-new gate) consume one canonical predicate instead of
-     * each re-deriving it from [region].
+     * Whether a region is currently resolved — the deduped `region != null` projection, as a **hot**
+     * [StateFlow] with a synchronous `.value`. Owned here so feature view models (survey, what's-new gate)
+     * consume one canonical predicate they can collect *and* read synchronously, instead of each snapshotting
+     * [region] and re-collecting it into a private mirror (#1969).
      */
-    val regionPresent: Flow<Boolean> get() = region.map { it != null }.distinctUntilChanged()
+    val regionPresent: StateFlow<Boolean>
 
     /**
      * The richer resolution state — what the UI can render directly: a refresh in flight,
@@ -152,14 +154,20 @@ class DefaultRegionRepository @Inject constructor(
     // Seeded null and then asynchronously from the region cache once the one-time import has run — the
     // Room cache read is suspend and must wait on the importer, so the @Singleton constructor can't read
     // it synchronously anymore. region.value is briefly null at cold start until the seed resolves; the
-    // region-derived subsystems collect the flow and re-init on emit, so they pick it up.
-    private val holder = RegionStateHolder(null)
+    // region-derived subsystems collect the flow and re-init on emit, so they pick it up. [state] starts
+    // Resolving (not Active(null)) so a one-shot consumer can tell "not resolved yet" from "no region" —
+    // the init block below settles it (#1969).
+    private val holder = RegionStateHolder()
 
     init {
         appScope.launch {
             val seeded = loadPersistedRegion()
-            // Don't clobber a region a concurrent refresh() may have already set.
-            if (seeded != null && holder.region.value == null) holder.activated(seeded)
+            // Settle the initial Resolving state now that the persisted region (if any) has loaded — to
+            // the persisted region, or to a deliberate Active(null) when a custom OBA API URL is configured
+            // (the rider set a custom endpoint, so there genuinely is no region). With neither, leave it
+            // Resolving for refresh() to settle. `seeded` is null in the custom-URL branch, so the single
+            // call covers both cases; settleIfResolving handles the concurrent-refresh race (see its doc).
+            if (seeded != null || hasCustomObaApiUrl()) holder.settleIfResolving(seeded)
         }
     }
 
@@ -167,12 +175,23 @@ class DefaultRegionRepository @Inject constructor(
 
     override val state: StateFlow<RegionState> get() = holder.state
 
+    // The canonical "is a region resolved?" predicate, kept hot on the app scope so consumers get a
+    // synchronous .value and one shared collector instead of each mirroring [region] themselves (#1969).
+    // Eagerly (not WhileSubscribed): it's a trivial derived boolean on a process-lifetime singleton, and
+    // keeping .value always current matters more than shedding a no-op collector when nobody's subscribed.
+    override val regionPresent: StateFlow<Boolean> =
+        holder.region.map { it != null }.distinctUntilChanged()
+            .stateIn(appScope, SharingStarted.Eagerly, holder.region.value != null)
+
     /** Loads the persisted current region (by the saved region-id) from the cache, or null if none. */
     private suspend fun loadPersistedRegion(): Region? {
         val id = prefs.getLong(R.string.preference_key_region, -1L)
         if (id < 0) return null
         return regionCache.cachedRegion(id)
     }
+
+    /** Whether a custom OBA API URL is configured — the "deliberately no region" case (used by init + [refresh]). */
+    private fun hasCustomObaApiUrl(): Boolean = prefs.getString(R.string.preference_key_oba_api_url, null)?.isNotEmpty() == true
 
     override fun applyRegion(region: Region?, regionChanged: Boolean) {
         // The canonical region write: this holder is the single source of truth for the current region
@@ -194,7 +213,7 @@ class DefaultRegionRepository @Inject constructor(
         holder.resolving()
 
         // A custom API URL means we don't use the Regions API at all (region stays null).
-        if (prefs.getString(R.string.preference_key_oba_api_url, null)?.isNotEmpty() == true) {
+        if (hasCustomObaApiUrl()) {
             holder.activated(null)
             return@withContext RegionStatus.Skipped
         }

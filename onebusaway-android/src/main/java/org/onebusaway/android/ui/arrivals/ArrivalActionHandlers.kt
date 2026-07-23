@@ -32,7 +32,7 @@ import org.onebusaway.android.util.PreferenceUtils
 
 /**
  * Builds the [ArrivalActionHandler] shared by the standalone arrivals activity and the map panel.
- * The only behavioral difference is [onShowRouteOnMap]: the standalone launches HomeActivity in
+ * The only behavioral difference is [revealRoute]: the standalone launches HomeActivity in
  * route mode, while the panel drives the existing map. Everything else (favorite/alert dialogs,
  * navigation, report flow) is identical, so it lives here once.
  */
@@ -40,8 +40,9 @@ fun createArrivalActionHandler(
     activity: AppCompatActivity,
     viewModel: ArrivalsViewModel,
     currentContent: () -> ArrivalsUiState.Content?,
-    // Carries the arrival's stop in the request, so route mode can narrow to the stop-relevant direction.
-    onShowRouteOnMap: (ArrivalInfo, ShowRouteRequest) -> Unit,
+    // Shows a route on the map for the given request — stop/direction-scoped or not, per the caller.
+    // The standalone launches HomeActivity in route mode; the panel drives the existing map.
+    revealRoute: (ArrivalInfo, ShowRouteRequest) -> Unit,
     // How to show the alert hide/undo snackbar — supplied by the host so the dialog isn't tied to a
     // specific View (the standalone activity anchors to its root; Compose hosts use a SnackbarHost).
     showUndoSnackbar: (messageRes: Int, actionRes: Int?, onAction: (() -> Unit)?) -> Unit,
@@ -69,10 +70,10 @@ fun createArrivalActionHandler(
 
     override fun onShowVehiclesOnMap(arrival: ArrivalInfo) {
         recordRoute(arrival)
-        // A row (or menu) tap always frames the whole route: pass the arrival's stop so route mode shows
+        // A row-body tap frames the route scoped to this stop: pass the arrival's stop so route mode shows
         // only the direction (stops + vehicles) serving it, but no focusTripId — the vehicle+stop zoom is
         // the ETA pill's job ([onFocusVehicleOnMap]).
-        onShowRouteOnMap(
+        revealRoute(
             arrival,
             ShowRouteRequest(
                 arrival.routeId,
@@ -82,22 +83,22 @@ fun createArrivalActionHandler(
         )
     }
 
+    override fun onShowRouteOnMap(arrival: ArrivalInfo) {
+        recordRoute(arrival)
+        // Bare request — no stop/direction scoping and no focusTripId (those make the row/pill variants
+        // stop-scoped) — so it mirrors NavController.revealRouteOnMap(routeId), the search-bar path.
+        revealRoute(arrival, ShowRouteRequest(arrival.routeId))
+    }
+
     override fun onFocusVehicleOnMap(arrival: ArrivalInfo) {
         recordRoute(arrival)
         // The ETA-pill tap: same route + direction as the row, plus the trip so the map fits that
-        // arrival's live vehicle together with this stop. When no live vehicle is running the trip, the map
-        // toasts "vehicle isn't on the map" and shows the route instead — that fallback lives in
-        // RouteMapController, keyed off focusTripId being set.
+        // arrival's live vehicle together with this stop. When no live vehicle is running the trip (or a
+        // partial response carries no tripId to key on), RouteMapController drops the focus silently — no
+        // camera move, no toast (#1992). The ETA strip's "on the map" pin already tells the user which
+        // pills reframe on tap, so a miss is expected rather than an error to announce.
         val tripId = arrival.tripId.ifBlank { null }
-        // A partial response with no tripId can't be focused at all, so the map has nothing to key on;
-        // toast up front (the pill must never be silently ignored) and still show the route for context.
-        // The other emitter of this same toast is RouteMapController's DROP path (via MapEffect.
-        // VehicleNotOnMap), for the case where a tripId exists but no live vehicle is running it — keep the
-        // two in sync via the shared R.string.stop_info_vehicle_not_on_map.
-        if (tripId == null) {
-            Toast.makeText(activity, R.string.stop_info_vehicle_not_on_map, Toast.LENGTH_SHORT).show()
-        }
-        onShowRouteOnMap(
+        revealRoute(
             arrival,
             ShowRouteRequest(
                 arrival.routeId,
